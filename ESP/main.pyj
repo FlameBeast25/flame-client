@@ -1,0 +1,85 @@
+from FlameClient.ESP.globals import *;
+import FlameClient.ESP.healthbars as HEALTHBARS;
+
+def render(draw_context):
+    draw = DRAWING.new;
+
+    level = MINECRAFT.level;
+    player = MINECRAFT.player;
+    game_renderer = MINECRAFT.gameRenderer;
+
+    if level is None or player is None or game_renderer is None:
+        return
+
+    if not SETTINGS["ESP_ENABLED"]:
+        return;
+
+    camera_position = game_renderer.getMainCamera().getPosition();
+
+    for entity in level.players():
+        # Settings Checks
+        if (entity == player) and (not SETTINGS["SHOW_SELF"]):
+            continue;
+        
+        if (not entity.isAlive()) and (not SETTINGS["SHOW_DEAD"]):
+            continue;
+
+        if (entity.isSpectator()) and (not SETTINGS["SHOW_SPECTATORS"]):
+            continue;
+
+        if (entity.isInvisible()) and (not SETTINGS["SHOW_INVISIBLE"]):
+            continue;
+
+        position = entity.getEyePosition(2);
+        distance = camera_position.distanceTo(position);
+
+        name = entity.getName().getString();
+
+        if (distance > SETTINGS["MAX_DISTANCE"]) or (name == "empty"):
+            continue;
+        
+        w2s = MATH.world_to_screen(game_renderer, vector3(position.x, position.y - (entity.getEyeHeight() * 0.5), position.z));
+
+        if (not w2s):
+            continue;
+
+        bb_width, bb_height = entity.getBbWidth(), entity.getBbHeight();
+        size = MATH.get_screen_scale(camera_position, position, bb_width, bb_height, player);
+
+        x, y = size.x, size.y;
+        w2s_x, w2s_y = w2s.x, w2s.y;
+
+        half_x, half_y = (x * 0.5), (y * 0.5);
+
+        left, right = j_float(int(w2s_x - half_x)), j_float(int(w2s_x + half_x));
+        top, bottom = j_float(int(w2s_y - half_y)), j_float(int(w2s_y + half_y));
+
+        bottom_a1 = j_float(int(bottom + 1));
+        bottom_n1 = j_float(int(bottom - 1));
+
+        # 1. Draw Box
+        if SETTINGS["SHOW_BOX"]:
+            draw("rect", draw_context, left, top, right, bottom, COLORS["BOX_COLOR"]);
+    
+        # 2. Draw Healthbar
+        HEALTHBARS.draw(draw_context, entity, left, top, right, bottom);
+
+        # 3. Draw Name
+        if SETTINGS["SHOW_NAME"]:
+            min_dist = SETTINGS.get("MIN_DISTANCE_NAME", 0)
+            if distance >= min_dist:
+                scale = SETTINGS.get("TEXT_SCALE", 1.0)
+                base = (left + (right - left) * 0.5);
+                draw("outline_text", draw_context, component.literal(name).withStyle(FLAGS), base - (FONT.width(name) * scale * 0.5), top - 10, COLORS["TEXT_COLOR"]);
+        
+        # 4. Draw Weapon
+        if SETTINGS["SHOW_WEAPON"]:
+            scale = SETTINGS.get("TEXT_SCALE", 1.0)
+            weapon = entity.getMainHandItem().getItemName().getString();
+            formatted = (weapon == "Air" and "None") or weapon;
+            
+            if formatted != "None":
+                base = (left + (right - left) * 0.5);
+                draw("outline_text", draw_context, component.literal(formatted).withStyle(FLAGS), base - (FONT.width(formatted) * scale * 0.5), bottom + 2.1, COLORS["TEXT_COLOR"]);
+
+EVENT_MANAGER.register("ESP", render);

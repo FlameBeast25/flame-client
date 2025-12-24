@@ -337,7 +337,7 @@ class Triggerbot:
             if targeted_entity and targeted_entity.type:
                 if "player" in targeted_entity.type.lower(): # Loose match
                     # Cooldown Check
-                    SWORD_COOLDOWN = 0.02 # ~1.6 Attack Speed
+                    SWORD_COOLDOWN = 0.63 # ~1.6 Attack Speed
                     if time.time() - self.last_attack_time >= SWORD_COOLDOWN:
                         minescript.player_press_attack(True)
                         time.sleep(0.05) # Hold for 50ms
